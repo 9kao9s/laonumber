@@ -7,6 +7,9 @@ const $ = (id) => document.getElementById(id);
 let DRAW = null;          // งวดที่กำลังดูอยู่
 let ENTRIES = [];
 let CLICKS = [];
+let USERS = new Map();    // line_user_id -> display_name
+let CLICK_DAY = null;     // วันที่กำลังดูในแท็บลิงก์
+let DRAW_CLICKS = 0;      // จำนวนคลิกของวันที่ตรงกับงวด ใช้ในการ์ดภาพรวม
 let SETTINGS = {};
 
 const fmtDate = (s) => new Intl.DateTimeFormat("th-TH",
@@ -118,6 +121,7 @@ async function boot() {
   await loadHistory();
 
   if (draws?.length) await selectDraw(draws[0].id);
+  await loadDaily();
 }
 
 async function selectDraw(id) {
@@ -131,7 +135,8 @@ async function selectDraw(id) {
     .select("note").eq("draw_id", id).maybeSingle();
   $("noteBox").value = n?.note ?? "";
 
-  await Promise.all([loadEntries(), loadClicks()]);
+  await Promise.all([loadEntries(), loadDrawClickCount()]);
+  if (!CLICK_DAY) await loadClicks(DRAW.draw_date);
   renderKpi();
   renderWinners();
   showDrawWindow();
@@ -144,15 +149,111 @@ async function loadEntries() {
   renderEntries();
 }
 
-async function loadClicks() {
-  const from = new Date(DRAW.draw_date + "T00:00:00+07:00").toISOString();
-  const to = new Date(DRAW.draw_date + "T23:59:59+07:00").toISOString();
+/* ── คลิกลิงก์ : แยกอิสระจากงวด เพราะวันที่ไม่มีงวดก็มีคนกดได้ ── */
+function dayRange(day) {
+  return [
+    new Date(day + "T00:00:00+07:00").toISOString(),
+    new Date(day + "T23:59:59.999+07:00").toISOString(),
+  ];
+}
+
+async function loadClicks(day) {
+  CLICK_DAY = day;
+  $("clickDate").value = day;
+
+  const [from, to] = dayRange(day);
   const { data } = await sb.from("link_clicks").select("*")
     .gte("created_at", from).lte("created_at", to)
-    .order("created_at", { ascending: false }).limit(500);
+    .order("created_at", { ascending: false }).limit(1000);
   CLICKS = data ?? [];
+
+  // ดึงชื่อ LINE มาแปะทีหลังด้วย query แยก แล้ว map เอง
+  // ไม่ใช้ embed join ของ Supabase เพราะพึ่งพาไม่ค่อยได้
+  const ids = [...new Set(CLICKS.map((c) => c.line_user_id).filter(Boolean))];
+  USERS.clear();
+  if (ids.length) {
+    const { data: us } = await sb.from("line_users")
+      .select("line_user_id,display_name").in("line_user_id", ids);
+    for (const u of us ?? []) USERS.set(u.line_user_id, u.display_name);
+  }
+
   renderRefs();
   renderClicks();
+}
+
+// นับคลิกของวันที่ตรงกับงวด ไว้ใช้ในการ์ดภาพรวมโดยเฉพาะ
+// แยกจาก CLICKS เพราะแอดมินอาจเลื่อนดูวันอื่นอยู่
+async function loadDrawClickCount() {
+  const [from, to] = dayRange(DRAW.draw_date);
+  const { count } = await sb.from("link_clicks")
+    .select("*", { count: "exact", head: true })
+    .gte("created_at", from).lte("created_at", to);
+  DRAW_CLICKS = count ?? 0;
+}
+
+async function loadDaily() {
+  const { data } = await sb.from("v_click_daily").select("*")
+    .order("day", { ascending: false }).limit(60);
+  const rows = data ?? [];
+
+  table("tblDaily",
+    ["วันที่", "คลิก", "คนไม่ซ้ำ", "ในแอป LINE", "ยังไม่ล็อกอิน", "จองต่อ", "อัตราแปลง"],
+    rows,
+    (d) => `<tr data-day="${d.day}" style="cursor:pointer"
+        class="${d.day === CLICK_DAY ? "sel" : ""}">
+      <td class="n">${fmtDate(d.day)}</td>
+      <td class="n">${d.clicks}</td>
+      <td class="n">${d.users}</td>
+      <td class="n">${d.in_line}</td>
+      <td class="n" style="color:var(--sub)">${d.anon_clicks}</td>
+      <td class="n">${d.converted}</td>
+      <td class="n">${d.clicks ? Math.round(d.converted / d.clicks * 100) : 0}%</td>
+    </tr>`);
+
+  $("tblDaily").querySelectorAll("tr[data-day]").forEach((tr) => {
+    tr.onclick = async () => {
+      await loadClicks(tr.dataset.day);
+      loadDaily();
+    };
+  });
+
+  const last = rows.slice(0, 30).reverse();
+  const max = Math.max(1, ...last.map((r) => Number(r.clicks)));
+  $("chartClicks").innerHTML = last.map((r) =>
+    `<div style="height:${Math.round(Number(r.clicks) / max * 100)}%"
+       title="${fmtDate(r.day)} · ${r.clicks} คลิก · จองต่อ ${r.converted}"></div>`).join("");
+}
+
+$("clickDate").onchange = async () => {
+  if (!$("clickDate").value) return;
+  await loadClicks($("clickDate").value);
+  loadDaily();
+};
+
+$("btnClickToday").onclick = async () => {
+  const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
+  await loadClicks(today);
+  loadDaily();
+};
+
+$("btnClickCsv").onclick = () => {
+  const head = ["created_at", "ผู้กด", "ref_code", "invite_token",
+    "in_line_app", "entry_id", "referrer", "line_user_id"];
+  const body = CLICKS.map((c) => [c.created_at, clickerName(c) ?? "", c.ref_code ?? "",
+    c.invite_token ?? "", c.in_line_app ? "ใช่" : "ไม่", c.entry_id ?? "",
+    c.referrer ?? "", c.line_user_id ?? ""]);
+  const csv = "\uFEFF" + [head, ...body]
+    .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+  a.download = `lucky-clicks-${CLICK_DAY}.csv`;
+  a.click();
+};
+
+// ชื่อคนกด ถ้ายังไม่ได้ล็อกอิน LINE ตอนกดจะไม่รู้ว่าเป็นใคร
+function clickerName(c) {
+  if (!c.line_user_id) return null;
+  return USERS.get(c.line_user_id) || c.line_user_id.slice(0, 10) + "…";
 }
 
 async function loadSettings() {
@@ -207,7 +308,7 @@ async function loadHistory() {
 /* ── ภาพรวม ───────────────────────────────────────────── */
 function renderKpi() {
   const players = new Set(ENTRIES.map((e) => e.line_user_id ?? "a" + e.id)).size;
-  const clicks = CLICKS.length;
+  const clicks = DRAW_CLICKS;
   const conv = clicks ? Math.round(ENTRIES.length / clicks * 100) : 0;
   const payout = ENTRIES.reduce((s, e) => s + Number(e.payout), 0);
 
@@ -264,36 +365,52 @@ function renderRefs() {
   const map = new Map();
   for (const c of CLICKS) {
     const k = c.ref_code || "(ไม่มีรหัส)";
-    const r = map.get(k) ?? { clicks: 0, users: new Set(), conv: 0 };
+    const r = map.get(k) ?? { clicks: 0, users: new Set(), anon: 0, conv: 0 };
     r.clicks++;
-    if (c.line_user_id) r.users.add(c.line_user_id);
+    if (c.line_user_id) r.users.add(c.line_user_id); else r.anon++;
     if (c.entry_id) r.conv++;
     map.set(k, r);
   }
   const rows = [...map.entries()].sort((a, b) => b[1].clicks - a[1].clicks);
 
-  table("tblRefs", ["รหัสลิงก์", "คลิก", "คนไม่ซ้ำ", "จองจริง", "อัตราแปลง"], rows,
-    ([k, r]) => `<tr>
+  table("tblRefs",
+    ["รหัสลิงก์", "คลิก", "คนไม่ซ้ำ", "จองจริง", "อัตราแปลง", "ใครกดบ้าง"],
+    rows,
+    ([k, r]) => {
+      const names = [...r.users].map((id) => USERS.get(id) || "ไม่ทราบชื่อ");
+      const shown = names.slice(0, 6).map(esc).join(", ");
+      const more = names.length > 6 ? ` +อีก ${names.length - 6}` : "";
+      return `<tr>
       <td class="mono">${esc(k)}</td>
       <td class="n">${r.clicks}</td>
       <td class="n">${r.users.size}</td>
       <td class="n">${r.conv}</td>
       <td class="n">${r.clicks ? Math.round(r.conv / r.clicks * 100) : 0}%</td>
-    </tr>`);
+      <td style="max-width:280px;font-size:12px">${shown || "-"}${more}
+        ${r.anon ? `<div style="color:var(--sub);font-size:11px">
+          ยังไม่ล็อกอิน ${r.anon} ครั้ง</div>` : ""}</td>
+    </tr>`;
+    });
 }
 
 function renderClicks() {
-  table("tblClicks", ["เวลา", "รหัสลิงก์", "invite", "ในแอป LINE", "จองต่อ", "ที่มา"],
+  table("tblClicks",
+    ["เวลา", "ผู้กด", "รหัสลิงก์", "ในแอป LINE", "จองต่อ", "ที่มา"],
     CLICKS.slice(0, 100),
-    (c) => `<tr>
+    (c) => {
+      const name = clickerName(c);
+      return `<tr>
       <td class="n" style="font-size:12px">${fmtTime(c.created_at)}</td>
+      <td>${name
+        ? esc(name)
+        : `<span style="color:var(--sub)">ไม่ทราบ</span>`}</td>
       <td class="mono">${esc(c.ref_code ?? "-")}</td>
-      <td class="mono" style="font-size:11px">${esc(c.invite_token ?? "-")}</td>
       <td>${c.in_line_app ? "ใช่" : "ไม่"}</td>
       <td>${c.entry_id ? `<span class="tag win">#${c.entry_id}</span>` : ""}</td>
-      <td style="font-size:11px;color:var(--sub);max-width:200px;overflow:hidden">
-        ${esc(c.referrer ?? "-")}</td>
-    </tr>`);
+      <td style="font-size:11px;color:var(--sub);max-width:180px;overflow:hidden">
+        ${esc(c.invite_token ? "i=" + c.invite_token + " · " : "")}${esc(c.referrer ?? "-")}</td>
+    </tr>`;
+    });
 }
 
 /* ── เพิ่มให้ลูกค้า ────────────────────────────────────── */
@@ -400,6 +517,7 @@ async function loadUsers() {
 }
 $("qUsers").oninput = () => loadUsers();
 document.querySelector('nav [data-t="users"]').addEventListener("click", loadUsers);
+document.querySelector('nav [data-t="links"]').addEventListener("click", () => loadDaily());
 
 /* ── เวลาเปิด-ปิด ─────────────────────────────────────── */
 const DAY_NAMES = ["จ", "อ", "พ", "พฤ", "ศ", "ส", "อา"];   // 1..7 ตาม isodow
