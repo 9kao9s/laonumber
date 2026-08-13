@@ -83,6 +83,11 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--stamp);outline-o
 .msg.ok{background:#EAF6EF;color:#1C5F45}
 .msg.bad{background:#FDECEC;color:#992028}
 
+.days{display:flex;gap:6px;flex-wrap:wrap}
+.days button{border:1px solid var(--hair);border-radius:8px;padding:8px 0;
+  width:46px;text-align:center;font-size:13px;background:#fff;color:var(--sub)}
+.days button.on{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:600}
+
 #login{max-width:340px;margin:16vh auto;padding:0 20px}
 #login .panel{padding:22px}
 #login h1{font-size:19px;margin:0 0 4px}
@@ -200,7 +205,35 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--stamp);outline-o
 
     <!-- ตั้งค่า -->
     <section id="s-settings">
-      <h2>ข้อความและกติกาบนหน้าลูกค้า</h2>
+      <h2>เวลาเปิด-ปิดรับเลข</h2>
+      <div class="panel" style="padding:16px;max-width:520px">
+        <div class="two" style="max-width:320px">
+          <div><label>เปิดรับ</label><input id="schOpen" type="time" step="60"></div>
+          <div><label>ปิดรับ</label><input id="schClose" type="time" step="60"></div>
+        </div>
+        <label style="margin-top:14px">วันที่เปิดรับ</label>
+        <div id="schDays" class="days"></div>
+        <button class="btn red" id="btnSchedule" style="margin-top:16px">
+          บันทึกและใช้กับงวดที่เปิดอยู่ทันที</button>
+        <div id="schMsg"></div>
+        <p style="font-size:12px;color:var(--sub);margin:12px 0 0;line-height:1.6">
+          ปุ่มนี้ทำสามอย่างพร้อมกัน บันทึกค่าไว้ใช้กับงวดในอนาคต
+          ปรับเวลาของงวดที่เปิดอยู่ตอนนี้ให้ทันที
+          และเลื่อนเวลาสร้างงวดอัตโนมัติให้ตรงกัน
+        </p>
+        <p id="schNow" class="mono" style="font-size:12px;color:var(--sub);margin:10px 0 0"></p>
+      </div>
+
+      <h2>สถานะงวดที่เลือกอยู่</h2>
+      <div class="panel" style="padding:16px;max-width:520px">
+        <div class="bar-actions" style="margin:0">
+          <button class="btn ghost" id="btnOpenNow">เปิดรับเลขเดี๋ยวนี้</button>
+          <button class="btn ghost" id="btnCloseNow">ปิดรับเลขเดี๋ยวนี้</button>
+        </div>
+        <div id="statusMsg"></div>
+      </div>
+
+      <h2>ข้อความบนหน้าลูกค้า</h2>
       <div class="form" id="settingsForm"></div>
       <button class="btn red" id="btnSaveSettings" style="margin-top:12px">บันทึกการตั้งค่า</button>
       <div id="setMsg"></div>
