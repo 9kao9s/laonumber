@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#23100E">
+<title>LUCKY · จองเลขนำโชค</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="config.js"></script>
+</head>
+<body>
+
+<header class="bar">
+  <div class="brand">LUCKY<span>.</span></div>
+  <div class="drawtag" id="drawTag">กำลังเชื่อมต่อ</div>
+</header>
+
+<main class="wrap">
+
+  <!-- ใบจอง -->
+  <section class="stub" aria-label="ใบจองเลขของคุณ">
+    <div class="eyebrow">
+      <span>ใบจองเลข</span>
+      <span class="mono" id="stubDate">—</span>
+    </div>
+
+    <div class="slots">
+      <div class="slot" id="slotTop">
+        <b>2 ตัวบน</b>
+        <div class="v empty" id="valTop">--</div>
+      </div>
+      <div class="slot" id="slotBottom">
+        <b>2 ตัวล่าง</b>
+        <div class="v empty" id="valBottom">--</div>
+      </div>
+    </div>
+
+    <div class="namebox">
+      <b>ชื่อ</b>
+      <input id="playerName" maxlength="28" placeholder="ชื่อที่จะแสดงบนกระดาน" autocomplete="off">
+    </div>
+
+    <p class="hero" id="heroText"></p>
+  </section>
+
+  <!-- เลือกฝั่ง -->
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tabTop" aria-selected="true">2 ตัวบน <span class="cnt" id="cntTop"></span></button>
+    <button role="tab" id="tabBottom" aria-selected="false">2 ตัวล่าง <span class="cnt" id="cntBottom"></span></button>
+  </div>
+
+  <div class="grid skeleton" id="grid"></div>
+</main>
+
+<!-- ปุ่มหลัก -->
+<div class="dock">
+  <div class="inner">
+    <button class="cta" id="ctaMain">เลือกเลขให้ครบก่อน</button>
+    <button class="sub" id="ctaRecover">เคยจองแล้ว? เปิดใบจองของฉัน</button>
+  </div>
+</div>
+
+<!-- ยืนยัน -->
+<div class="sheet" id="sheetConfirm">
+  <div>
+    <h2>ตรวจก่อนยืนยัน</h2>
+    <p class="note">ยืนยันแล้วเปลี่ยนเลขไม่ได้ และใช้สิทธิ์ของวันนี้ทันที</p>
+
+    <div class="preview">
+      <div class="eyebrow" style="display:flex;justify-content:space-between;font-size:10px;letter-spacing:.2em;color:#8A6F52">
+        <span id="pvName">—</span><span class="mono" id="pvDraw">—</span>
+      </div>
+      <div class="pv">
+        <div><b>2 ตัวบน</b><span id="pvTop">--</span></div>
+        <div><b>2 ตัวล่าง</b><span id="pvBottom">--</span></div>
+      </div>
+    </div>
+
+    <div class="err" id="confirmErr"></div>
+    <div class="rowbtn">
+      <button class="cta ghost" id="btnBack">กลับไปแก้</button>
+      <button class="cta" id="btnSubmit">ยืนยันจองเลข</button>
+    </div>
+  </div>
+</div>
+
+<!-- ใบจองที่สำเร็จแล้ว -->
+<div class="sheet" id="sheetSlip">
+  <div>
+    <h2>จองเลขเรียบร้อย</h2>
+    <p class="note" id="slipNote">ส่งใบจองนี้ให้แอดมินเพื่อยืนยันสิทธิ์</p>
+    <canvas id="slipCanvas" width="820" height="1060"></canvas>
+    <div class="rowbtn">
+      <button class="cta ghost" id="btnCloseSlip">ปิด</button>
+      <button class="cta" id="btnShare">ส่งให้แอดมิน</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
