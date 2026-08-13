@@ -114,6 +114,7 @@ async function boot() {
   $("drawPick").onchange = () => selectDraw(Number($("drawPick").value));
 
   await loadSettings();
+  renderSchedule();
   await loadHistory();
 
   if (draws?.length) await selectDraw(draws[0].id);
@@ -133,6 +134,7 @@ async function selectDraw(id) {
   await Promise.all([loadEntries(), loadClicks()]);
   renderKpi();
   renderWinners();
+  showDrawWindow();
 }
 
 async function loadEntries() {
@@ -165,8 +167,12 @@ async function loadSettings() {
     admin_line_url: "ลิงก์ทักแอดมิน", result_url: "ลิงก์ตรวจผล",
     closed_message: "ข้อความตอนปิดรับ",
   };
-  $("settingsForm").innerHTML = (data ?? []).map((r) => {
+  const HANDLED = ["open_time", "close_time", "open_days"];   // มีกล่องของตัวเองแล้ว
+
+  $("settingsForm").innerHTML = (data ?? []).filter((r) => {
     SETTINGS[r.key] = r.value;
+    return !HANDLED.includes(r.key);
+  }).map((r) => {
     return `<div><label>${esc(labels[r.key] ?? r.key)}
       <span class="mono" style="opacity:.5">${esc(r.key)}</span></label>
       <input data-k="${esc(r.key)}" value="${esc(r.value)}"></div>`;
@@ -394,6 +400,78 @@ async function loadUsers() {
 }
 $("qUsers").oninput = () => loadUsers();
 document.querySelector('nav [data-t="users"]').addEventListener("click", loadUsers);
+
+/* ── เวลาเปิด-ปิด ─────────────────────────────────────── */
+const DAY_NAMES = ["จ", "อ", "พ", "พฤ", "ศ", "ส", "อา"];   // 1..7 ตาม isodow
+let PICKED_DAYS = new Set();
+
+function renderSchedule() {
+  $("schOpen").value = (SETTINGS.open_time ?? "09:00").slice(0, 5);
+  $("schClose").value = (SETTINGS.close_time ?? "20:10").slice(0, 5);
+
+  PICKED_DAYS = new Set((SETTINGS.open_days ?? "1,2,3,4,5")
+    .split(",").map((s) => s.trim()).filter(Boolean));
+
+  $("schDays").innerHTML = DAY_NAMES.map((n, i) => {
+    const d = String(i + 1);
+    return `<button type="button" data-d="${d}"
+      class="${PICKED_DAYS.has(d) ? "on" : ""}">${n}</button>`;
+  }).join("");
+
+  $("schDays").querySelectorAll("button").forEach((b) => {
+    b.onclick = () => {
+      const d = b.dataset.d;
+      PICKED_DAYS.has(d) ? PICKED_DAYS.delete(d) : PICKED_DAYS.add(d);
+      b.classList.toggle("on");
+    };
+  });
+
+  showDrawWindow();
+}
+
+function showDrawWindow() {
+  if (!DRAW) return ($("schNow").textContent = "");
+  const f = (t) => t
+    ? new Date(t).toLocaleString("th-TH", { timeZone: "Asia/Bangkok", hour12: false,
+        day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
+    : "ไม่กำหนด";
+  $("schNow").textContent =
+    `งวดที่เลือกอยู่ · เปิด ${f(DRAW.opens_at)} · ปิด ${f(DRAW.closes_at)} · ${DRAW.status}`;
+}
+
+$("btnSchedule").onclick = async () => {
+  const days = [...PICKED_DAYS].sort().join(",");
+  if (!days) return msg("schMsg", "เลือกวันเปิดรับอย่างน้อยหนึ่งวัน", false);
+
+  $("btnSchedule").disabled = true;
+  const { data, error } = await sb.rpc("apply_schedule", {
+    p_open: $("schOpen").value, p_close: $("schClose").value, p_days: days,
+  });
+  $("btnSchedule").disabled = false;
+
+  if (error) return msg("schMsg", error.message, false);
+
+  msg("schMsg", `บันทึกแล้ว · ปรับงวดที่เปิดอยู่ ${data.draws_updated} งวด ` +
+    `· cron ใหม่ ${data.cron} (เวลา UTC)`);
+
+  await loadSettings();
+  renderSchedule();
+  if (DRAW) await selectDraw(DRAW.id);
+};
+
+async function setStatus(status) {
+  if (!DRAW) return;
+  const { error } = await sb.rpc("set_draw_status",
+    { p_draw_id: DRAW.id, p_status: status });
+  if (error) return msg("statusMsg", error.message, false);
+  msg("statusMsg", status === "open" ? "เปิดรับเลขแล้ว" : "ปิดรับเลขแล้ว");
+  await selectDraw(DRAW.id);
+  await loadHistory();
+}
+$("btnOpenNow").onclick = () => setStatus("open");
+$("btnCloseNow").onclick = () => {
+  if (confirm("ปิดรับเลขของงวดนี้ทันที ลูกค้าจะจองเพิ่มไม่ได้")) setStatus("closed");
+};
 
 /* ── ตั้งค่า ──────────────────────────────────────────── */
 $("btnSaveSettings").onclick = async () => {
