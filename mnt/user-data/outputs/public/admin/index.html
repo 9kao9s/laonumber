@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>LUCKY · หลังบ้าน</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* หลังบ้านตั้งใจให้คนละอารมณ์กับหน้าลูกค้า: สว่าง แน่น อ่านตัวเลขง่าย */
+:root{
+  --ink:#1A1614; --sub:#6E635C; --hair:#E2DCD3; --bg:#FBFAF7; --card:#fff;
+  --stamp:#C8102E; --jade:#2E7D5B; --gold:#B4890F;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"IBM Plex Sans Thai",system-ui,sans-serif;font-size:14px}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+.mono{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums}
+a{color:var(--stamp)}
+
+.top{position:sticky;top:0;z-index:20;background:var(--card);
+  border-bottom:1px solid var(--hair);padding:12px 18px;
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.top h1{margin:0;font-size:16px;font-weight:600;letter-spacing:.02em}
+.top h1 i{color:var(--stamp);font-style:normal}
+.who{margin-left:auto;font-size:12px;color:var(--sub)}
+
+nav{display:flex;gap:2px;overflow-x:auto;padding:0 12px;background:var(--card);
+  border-bottom:1px solid var(--hair);position:sticky;top:53px;z-index:19}
+nav button{padding:11px 13px;font-size:13px;color:var(--sub);white-space:nowrap;
+  border-bottom:2px solid transparent}
+nav button.on{color:var(--ink);font-weight:600;border-bottom-color:var(--stamp)}
+
+main{max-width:1080px;margin:0 auto;padding:18px 14px 80px}
+section{display:none}section.on{display:block}
+h2{font-size:14px;font-weight:600;margin:24px 0 10px;letter-spacing:.02em}
+h2:first-child{margin-top:0}
+
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:10px}
+.card{background:var(--card);border:1px solid var(--hair);border-radius:10px;padding:13px 15px}
+.card b{display:block;font-size:11px;color:var(--sub);font-weight:500;letter-spacing:.04em}
+.card .v{font-family:"IBM Plex Mono",monospace;font-size:27px;font-weight:600;line-height:1.3}
+.card .v small{font-size:13px;color:var(--sub);font-weight:400}
+.card.hi .v{color:var(--stamp)}
+
+.panel{background:var(--card);border:1px solid var(--hair);border-radius:10px;overflow:hidden}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{font-size:11px;color:var(--sub);font-weight:500;text-align:left;
+  padding:9px 12px;border-bottom:1px solid var(--hair);white-space:nowrap;
+  position:sticky;top:0;background:var(--card)}
+.tbl td{padding:9px 12px;border-bottom:1px solid #F1EDE7;vertical-align:top}
+.tbl tr:last-child td{border-bottom:0}
+.tbl td.n{font-family:"IBM Plex Mono",monospace;font-weight:600}
+.scroll{max-height:62vh;overflow:auto}
+.empty{padding:30px;text-align:center;color:var(--sub);font-size:13px}
+
+.tag{display:inline-block;font-size:10px;padding:2px 7px;border-radius:99px;
+  border:1px solid var(--hair);color:var(--sub)}
+.tag.win{border-color:var(--jade);color:var(--jade)}
+.tag.adm{border-color:var(--gold);color:var(--gold)}
+
+.bars{display:flex;align-items:flex-end;gap:4px;height:110px;
+  padding:12px;background:var(--card);border:1px solid var(--hair);border-radius:10px}
+.bars div{flex:1;background:var(--stamp);border-radius:2px 2px 0 0;min-height:2px;opacity:.85}
+.bars div:hover{opacity:1}
+
+.form{display:grid;gap:11px;max-width:440px}
+label{display:block;font-size:12px;color:var(--sub);margin-bottom:4px}
+input,select,textarea{width:100%;border:1px solid var(--hair);border-radius:8px;
+  padding:9px 11px;background:#fff}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--stamp);outline-offset:-1px;border-color:transparent}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{background:var(--ink);color:#fff;border-radius:8px;padding:10px 16px;font-weight:600;font-size:13px}
+.btn.red{background:var(--stamp)}
+.btn.ghost{background:#fff;border:1px solid var(--hair);color:var(--ink)}
+.btn:disabled{opacity:.5}
+.bar-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.bar-actions input,.bar-actions select{width:auto;min-width:150px}
+
+.msg{padding:10px 13px;border-radius:8px;font-size:13px;margin:10px 0}
+.msg.ok{background:#EAF6EF;color:#1C5F45}
+.msg.bad{background:#FDECEC;color:#992028}
+
+#login{max-width:340px;margin:16vh auto;padding:0 20px}
+#login .panel{padding:22px}
+#login h1{font-size:19px;margin:0 0 4px}
+#login p{color:var(--sub);font-size:13px;margin:0 0 18px}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+
+<!-- ล็อกอิน -->
+<div id="login">
+  <div class="panel">
+    <h1>LUCKY หลังบ้าน</h1>
+    <p>เข้าสู่ระบบด้วยบัญชีแอดมิน</p>
+    <div class="form">
+      <div><label>อีเมล</label><input id="email" type="email" autocomplete="username"></div>
+      <div><label>รหัสผ่าน</label><input id="pass" type="password" autocomplete="current-password"></div>
+      <button class="btn red" id="btnLogin">เข้าสู่ระบบ</button>
+      <div id="loginMsg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- แอป -->
+<div id="app" class="hide">
+  <div class="top">
+    <h1>LUCKY <i>·</i> หลังบ้าน</h1>
+    <select id="drawPick" style="width:auto"></select>
+    <span class="who" id="whoami"></span>
+    <button class="btn ghost" id="btnLogout">ออก</button>
+  </div>
+
+  <nav>
+    <button data-t="sum" class="on">ภาพรวม</button>
+    <button data-t="entries">รายการจอง</button>
+    <button data-t="links">ลิงก์</button>
+    <button data-t="add">เพิ่มให้ลูกค้า</button>
+    <button data-t="result">ประกาศผล</button>
+    <button data-t="users">ผู้เล่น</button>
+    <button data-t="settings">ตั้งค่า</button>
+  </nav>
+
+  <main>
+    <!-- ภาพรวม -->
+    <section id="s-sum" class="on">
+      <div class="cards" id="kpi"></div>
+      <h2>จำนวนคนจองย้อนหลัง 14 งวด</h2>
+      <div class="bars" id="chart"></div>
+      <h2>ประวัติ 31 งวดล่าสุด</h2>
+      <div class="panel scroll"><table class="tbl" id="tblDraws"></table></div>
+    </section>
+
+    <!-- รายการจอง -->
+    <section id="s-entries">
+      <div class="bar-actions">
+        <input id="qEntries" placeholder="ค้นชื่อ หรือ เลข">
+        <button class="btn ghost" id="btnCsv">ดาวน์โหลด CSV</button>
+      </div>
+      <div class="panel scroll"><table class="tbl" id="tblEntries"></table></div>
+    </section>
+
+    <!-- ลิงก์ -->
+    <section id="s-links">
+      <h2>ผลของแต่ละลิงก์ในงวดนี้</h2>
+      <div class="panel scroll"><table class="tbl" id="tblRefs"></table></div>
+      <h2>คลิกล่าสุด 100 รายการ</h2>
+      <div class="panel scroll"><table class="tbl" id="tblClicks"></table></div>
+    </section>
+
+    <!-- เพิ่มให้ลูกค้า -->
+    <section id="s-add">
+      <h2>เพิ่มเลขให้ลูกค้า</h2>
+      <p style="color:var(--sub);font-size:13px;max-width:440px;margin-top:0">
+        รายการที่เพิ่มจากหน้านี้ไม่นับสิทธิ์ฟรีของบัญชี LINE
+        แต่ยังทับเลขที่มีเจ้าของแล้วไม่ได้
+      </p>
+      <div class="form">
+        <div><label>ชื่อลูกค้า</label><input id="aName" maxlength="40"></div>
+        <div class="two">
+          <div><label>2 ตัวบน</label><input id="aTop" class="mono" maxlength="2" inputmode="numeric"></div>
+          <div><label>2 ตัวล่าง</label><input id="aBottom" class="mono" maxlength="2" inputmode="numeric"></div>
+        </div>
+        <div><label>หมายเหตุ</label><input id="aNote" placeholder="เช่น ลูกค้าขอเพิ่มทาง LINE"></div>
+        <button class="btn red" id="btnAdd">เพิ่มรายการ</button>
+        <div id="addMsg"></div>
+      </div>
+    </section>
+
+    <!-- ประกาศผล -->
+    <section id="s-result">
+      <h2>ประกาศผลงวดที่เลือก</h2>
+      <div class="form">
+        <div class="two">
+          <div><label>ผล 2 ตัวบน</label><input id="rTop" class="mono" maxlength="2" inputmode="numeric"></div>
+          <div><label>ผล 2 ตัวล่าง</label><input id="rBottom" class="mono" maxlength="2" inputmode="numeric"></div>
+        </div>
+        <button class="btn red" id="btnSettle">บันทึกผลและคำนวณรางวัล</button>
+        <div id="resultMsg"></div>
+      </div>
+      <h2>ผู้ถูกรางวัล</h2>
+      <div class="panel scroll"><table class="tbl" id="tblWinners"></table></div>
+      <h2>บันทึกประจำงวด</h2>
+      <div class="form">
+        <textarea id="noteBox" rows="4" placeholder="บันทึกภายในของงวดนี้"></textarea>
+        <button class="btn ghost" id="btnNote">บันทึก</button>
+        <div id="noteMsg"></div>
+      </div>
+    </section>
+
+    <!-- ผู้เล่น -->
+    <section id="s-users">
+      <div class="bar-actions"><input id="qUsers" placeholder="ค้นชื่อผู้เล่น"></div>
+      <div class="panel scroll"><table class="tbl" id="tblUsers"></table></div>
+    </section>
+
+    <!-- ตั้งค่า -->
+    <section id="s-settings">
+      <h2>ข้อความและกติกาบนหน้าลูกค้า</h2>
+      <div class="form" id="settingsForm"></div>
+      <button class="btn red" id="btnSaveSettings" style="margin-top:12px">บันทึกการตั้งค่า</button>
+      <div id="setMsg"></div>
+    </section>
+  </main>
+</div>
+
+<script src="../config.js"></script>
+<script type="module" src="admin.js"></script>
+</body>
+</html>
