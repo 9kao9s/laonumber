@@ -33,7 +33,23 @@ function table(el, cols, rows, render) {
     `<tbody>${rows.map(render).join("")}</tbody>`;
 }
 
-/* ── ล็อกอิน ─────────────────────────────────────────── */
+/* ── ล็อกอินด้วยชื่อผู้ใช้ ────────────────────────────
+   Supabase Auth ต้องการอีเมลเสมอ เราจึงต่อโดเมนภายในให้อัตโนมัติ
+   คนใช้พิมพ์แค่ wong ระบบจะส่ง wong@laonumber.local ไปให้ Supabase
+   โดเมนนี้ไม่มีอยู่จริงและไม่ต้องมี ไม่มีการส่งอีเมลใด ๆ ทั้งสิ้น
+   ถ้าจะเปลี่ยนโดเมน ต้องเปลี่ยนที่ Supabase > Authentication ด้วย */
+const LOGIN_DOMAIN = "laonumber.local";
+
+function toEmail(input) {
+  const v = input.trim().toLowerCase();
+  return v.includes("@") ? v : `${v}@${LOGIN_DOMAIN}`;
+}
+
+function toUsername(email) {
+  return String(email ?? "").split("@")[0];
+}
+
+/* ── ตรวจสิทธิ์ ──────────────────────────────────────── */
 async function gate() {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) return show(false);
@@ -47,7 +63,7 @@ async function gate() {
     return show(false);
   }
 
-  $("whoami").textContent = admin.email || session.user.email;
+  $("whoami").textContent = toUsername(admin.email || session.user.email);
   show(true);
   await boot();
 }
@@ -58,14 +74,22 @@ function show(loggedIn) {
 }
 
 $("btnLogin").onclick = async () => {
+  const u = $("email").value.trim();
+  if (!u || !$("pass").value) return msg("loginMsg", "กรอกชื่อผู้ใช้และรหัสผ่าน", false);
+
   $("btnLogin").disabled = true;
   const { error } = await sb.auth.signInWithPassword({
-    email: $("email").value.trim(), password: $("pass").value,
+    email: toEmail(u), password: $("pass").value,
   });
   $("btnLogin").disabled = false;
-  if (error) return msg("loginMsg", "อีเมลหรือรหัสผ่านไม่ถูกต้อง", false);
+  if (error) return msg("loginMsg", "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง", false);
   gate();
 };
+
+// กด Enter ในช่องรหัสผ่านแล้วล็อกอินเลย
+$("pass").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") $("btnLogin").click();
+});
 
 $("btnLogout").onclick = async () => { await sb.auth.signOut(); location.reload(); };
 
