@@ -52,6 +52,8 @@ h2:first-child{margin-top:0}
   position:sticky;top:0;background:var(--card)}
 .tbl td{padding:9px 12px;border-bottom:1px solid #F1EDE7;vertical-align:top}
 .tbl tr:last-child td{border-bottom:0}
+.tbl tr[data-day]:hover td{background:#F7F4EF}
+.tbl tr.sel td{background:#FDF0F1;box-shadow:inset 3px 0 0 var(--stamp)}
 .tbl td.n{font-family:"IBM Plex Mono",monospace;font-weight:600}
 .scroll{max-height:62vh;overflow:auto}
 .empty{padding:30px;text-align:center;color:var(--sub);font-size:13px}
@@ -151,10 +153,22 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--stamp);outline-o
 
     <!-- ลิงก์ -->
     <section id="s-links">
-      <h2>ผลของแต่ละลิงก์ในงวดนี้</h2>
+      <h2>สรุปรายวัน 60 วันล่าสุด</h2>
+      <div class="bars" id="chartClicks" style="margin-bottom:10px"></div>
+      <div class="panel scroll" style="max-height:34vh">
+        <table class="tbl" id="tblDaily"></table>
+      </div>
+
+      <h2>รายละเอียดของวันที่เลือก</h2>
+      <div class="bar-actions">
+        <input id="clickDate" type="date">
+        <button class="btn ghost" id="btnClickToday">วันนี้</button>
+        <button class="btn ghost" id="btnClickCsv">ดาวน์โหลด CSV</button>
+      </div>
       <div class="panel scroll"><table class="tbl" id="tblRefs"></table></div>
-      <h2>คลิกล่าสุด 100 รายการ</h2>
-      <div class="panel scroll"><table class="tbl" id="tblClicks"></table></div>
+      <div class="panel scroll" style="margin-top:10px">
+        <table class="tbl" id="tblClicks"></table>
+      </div>
     </section>
 
     <!-- เพิ่มให้ลูกค้า -->
