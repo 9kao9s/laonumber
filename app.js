@@ -510,6 +510,53 @@ async function shareSlip() {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+/* ── ป๊อปอัปวิธีเล่น ──────────────────────────────────── */
+// รูปแบบค่าใน app_settings คือ  หัวข้อ|คำอธิบาย
+// แก้ข้อความได้จากหลังบ้าน แท็บตั้งค่า โดยไม่ต้องแตะโค้ด
+const HOWTO_SEEN = "LUCKY_HOWTO_V1";
+const HOWTO_FALLBACK = [
+  "เลือกเลขนำโชค|เลือก 2 ตัวบน 1 เลข และ 2 ตัวล่าง 1 เลข",
+  "ยืนยันและส่งใบจอง|กดยืนยัน แล้วแชร์ภาพใบจองให้แอดมิน",
+  "รอผลหวยลาว|ผลออกเวลา 20.30 น. ของวันเดียวกัน",
+  "ถูกรางวัลทักแอดมิน|ติดต่อรับรางวัลก่อน 21.00 น.",
+];
+
+function renderHowto() {
+  $("howtoTitle").textContent = S.settings.howto_title ?? "วิธีร่วมสนุก";
+
+  const steps = [1, 2, 3, 4]
+    .map((i, k) => S.settings["howto_" + i] || HOWTO_FALLBACK[k])
+    .filter(Boolean);
+
+  $("howtoSteps").innerHTML = steps.map((line) => {
+    const [head, desc = ""] = String(line).split("|");
+    return `<li><div><b>${escapeHtml(head.trim())}</b>` +
+      (desc.trim() ? `<span>${escapeHtml(desc.trim())}</span>` : "") + `</div></li>`;
+  }).join("");
+
+  const foot = S.settings.howto_footer ?? "";
+  $("howtoFoot").textContent = foot;
+  $("howtoFoot").style.display = foot ? "" : "none";
+}
+
+function openHowto() {
+  renderHowto();
+  $("sheetHowto").classList.add("show");
+}
+
+function closeHowto() {
+  $("sheetHowto").classList.remove("show");
+  try { localStorage.setItem(HOWTO_SEEN, "1"); } catch {}
+}
+
+// เปิดอัตโนมัติเฉพาะคนที่ยังไม่เคยเห็น
+// ถ้าอยากให้ทุกคนเห็นใหม่ ให้เปลี่ยนเลขท้าย HOWTO_SEEN เป็น V2
+function maybeShowHowto() {
+  let seen = false;
+  try { seen = localStorage.getItem(HOWTO_SEEN) === "1"; } catch {}
+  if (!seen) openHowto();
+}
+
 /* ── ใบจองของเรา ──────────────────────────────────────── */
 async function loadMine() {
   if (!S.liff.ready) return;
@@ -548,6 +595,9 @@ async function subscribeBoard() {
   $("btnSubmit").onclick = submit;
   $("btnCloseSlip").onclick = () => $("sheetSlip").classList.remove("show");
   $("btnShare").onclick = shareSlip;
+  $("btnHelp").onclick = openHowto;
+  $("btnHowtoClose").onclick = closeHowto;
+  $("sheetHowto").onclick = (e) => { if (e.target.id === "sheetHowto") closeHowto(); };
   $("ctaRecover").onclick = async () => {
     await loadMine();
     if (S.mine) showSlip(S.mine);
@@ -561,6 +611,7 @@ async function subscribeBoard() {
   const line = initLiff();
 
   board.then(() => {
+    maybeShowHowto();      // รอให้ค่าตั้งค่ามาก่อน ข้อความจะได้ตรง
     // กระดานขึ้นแล้ว ที่เหลือค่อยตามมาทีหลังโดยไม่ขวางอะไร
     line.then(() => {
       updateCta();
