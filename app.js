@@ -549,12 +549,21 @@ function closeHowto() {
   try { localStorage.setItem(HOWTO_SEEN, "1"); } catch {}
 }
 
-// เปิดอัตโนมัติเฉพาะคนที่ยังไม่เคยเห็น
-// ถ้าอยากให้ทุกคนเห็นใหม่ ให้เปลี่ยนเลขท้าย HOWTO_SEEN เป็น V2
+/* เปิดป๊อปอัปหรือไม่ ขึ้นกับค่า howto_mode ในหลังบ้าน
+     always  เปิดทุกครั้งที่เข้าหน้านี้ รวมถึงเข้าผ่านลิงก์ ref ทุกเส้น
+     once    เปิดเฉพาะคนที่ยังไม่เคยเห็น
+     off     ไม่เปิดอัตโนมัติเลย กดปุ่ม ? เอาเอง
+   ลิงก์ ref ทุกเส้นชี้มาที่หน้าเดียวกัน จึงใช้กติกาเดียวกันทั้งหมด */
 function maybeShowHowto() {
-  let seen = false;
-  try { seen = localStorage.getItem(HOWTO_SEEN) === "1"; } catch {}
-  if (!seen) openHowto();
+  const mode = S.settings.howto_mode ?? "always";
+  if (mode === "off") return;
+
+  if (mode === "once") {
+    let seen = false;
+    try { seen = localStorage.getItem(HOWTO_SEEN) === "1"; } catch {}
+    if (seen) return;
+  }
+  openHowto();
 }
 
 /* ── ใบจองของเรา ──────────────────────────────────────── */
