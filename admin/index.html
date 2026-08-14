@@ -153,6 +153,21 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--stamp);outline-o
 
     <!-- ลิงก์ -->
     <section id="s-links">
+      <h2>ลิงก์ประจำช่องทาง</h2>
+      <p style="color:var(--sub);font-size:12px;margin:0 0 10px;max-width:640px">
+        LINE ไม่บอกว่าคนกดมาจาก OA ตัวไหน ต้องตั้งรหัสแยกเองแล้วเอาลิงก์
+        คนละเส้นไปแปะคนละที่ ระบบถึงจะแยกสถิติให้ได้
+      </p>
+      <div class="bar-actions">
+        <input id="refCode" placeholder="รหัส เช่น oa-main" maxlength="40">
+        <input id="refLabel" placeholder="ชื่อที่เข้าใจง่าย เช่น LINE OA หลัก" maxlength="60">
+        <button class="btn ghost" id="btnAddRef">เพิ่มลิงก์</button>
+      </div>
+      <div id="refMsg"></div>
+      <div class="panel scroll" style="max-height:36vh">
+        <table class="tbl" id="tblRefCodes"></table>
+      </div>
+
       <h2>สรุปรายวัน 60 วันล่าสุด</h2>
       <div class="bars" id="chartClicks" style="margin-bottom:10px"></div>
       <div class="panel scroll" style="max-height:34vh">
