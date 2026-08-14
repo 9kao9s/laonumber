@@ -279,6 +279,25 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .skeleton { animation: pulse 1.3s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: .45 } }
 
+/* ── จอคอม : จัดให้อยู่กลาง ไม่ให้ยืดเป็นแถบสูงผิดสัดส่วน ── */
+@media (min-width: 700px) {
+  .wrap { max-width: 620px; justify-content: center; gap: 14px; }
+  .grid { flex: 0 1 auto; height: min(46vh, 460px); }
+  .bar { padding-top: 14px; }
+  .dock { padding-bottom: 18px; }
+  .cell .n { font-size: 20px; }
+  .stub { padding: 16px 18px 18px; }
+  .slot .v { font-size: 32px; }
+  .namebox input { font-size: 15px; }
+}
+
+/* เมาส์ชี้ได้ ก็ให้รู้ว่าช่องไหนกดได้ */
+@media (hover: hover) {
+  .cell.free:hover { background: #F7EFDD; box-shadow: 0 0 0 2px var(--gold); }
+  .cell.taken:hover { background: #341B17; }
+  .helpbtn:hover { color: var(--paper); border-color: var(--ash); }
+}
+
 /* ── จอสูงพอ : มีที่ให้โชว์ชื่อเจ้าของบนกระดานได้ ──────── */
 @media (min-height: 780px) and (min-width: 400px) {
   .cell { flex-direction: column; gap: 1px; }
