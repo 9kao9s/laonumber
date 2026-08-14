@@ -119,48 +119,61 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   background: var(--lacquer-2); border: 1px solid var(--line);
 }
 .tabs button {
-  flex: 1; padding: 8px; border-radius: 8px; font-weight: 600; font-size: 13px;
-  color: var(--ash); transition: background .16s, color .16s;
+  flex: 1; padding: 9px; border-radius: 8px; font-weight: 600; font-size: 14px;
+  color: #C8B6AC; transition: background .16s, color .16s;
 }
 .tabs button[aria-selected="true"] { background: var(--stamp); color: #fff; }
-.tabs .cnt { font-size: 10px; opacity: .75; margin-left: 4px; }
+.tabs .cnt { font-size: 11px; opacity: .8; margin-left: 5px; font-weight: 500; }
 
 /* ── กระดานเลข : 10x10 เติมพื้นที่ที่เหลือพอดี ────────── */
+/* กลับด้านสีโดยตั้งใจ ช่องที่ยังว่างเป็นกระดาษสว่าง เพราะนั่นคือ
+   สิ่งที่ลูกค้ามาหา ส่วนช่องที่จองไปแล้วให้จมลงไปในพื้นหลัง */
 .grid {
   flex: 1; min-height: 0;
   display: grid;
   grid-template-columns: repeat(10, 1fr);
   grid-template-rows: repeat(10, 1fr);
-  gap: clamp(2px, .8vw, 5px);
+  gap: clamp(2px, .9vw, 5px);
 }
 
 .cell {
   position: relative; min-width: 0; min-height: 0; padding: 0;
-  border: 1px solid var(--line); border-radius: clamp(4px, 1.2vw, 7px);
-  background: var(--lacquer-2);
+  border-radius: clamp(4px, 1.2vw, 7px);
   display: flex; align-items: center; justify-content: center;
-  overflow: hidden; transition: transform .12s, border-color .16s, background .16s;
+  overflow: hidden;
+  transition: transform .12s, background .16s, box-shadow .16s;
 }
 .cell .n {
   font-family: "Chakra Petch", sans-serif; font-weight: 700;
-  font-size: clamp(11px, 3.1vw, 17px); letter-spacing: .03em; line-height: 1;
+  font-size: clamp(13px, 3.6vw, 19px); letter-spacing: 0; line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 .cell .who { display: none; }        /* จอแคบไม่มีที่พอ แตะดูชื่อเอาแทน */
-.cell.free .n { color: var(--paper); }
 .cell:active { transform: scale(.9); }
 
-.cell.picked { background: var(--stamp); border-color: var(--stamp); }
+/* ว่าง : กระดาษ อ่านชัดที่สุดในหน้านี้ */
+.cell.free {
+  background: #E9DDC7; border: 0;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .1);
+}
+.cell.free .n { color: #241310; }
+
+/* กำลังเลือก : ตราแดง */
+.cell.picked { background: var(--stamp); box-shadow: 0 0 0 2px var(--gold); }
 .cell.picked .n { color: #fff; }
 
-.cell.taken { background: #190B09; border-color: #2E1614; }
-.cell.taken .n { color: #6B5049; }
-.cell.taken::after {                 /* ขีดฆ่าแทนตราประทับ เพราะช่องเล็กลงแล้ว */
-  content: ""; position: absolute; left: 14%; right: 14%; top: 50%;
-  height: 1.5px; background: var(--stamp); opacity: .5;
+/* จองแล้ว : จมลงไป แต่ยังอ่านออก */
+.cell.taken { background: #2B1613; box-shadow: inset 0 0 0 1px #3D211C; }
+.cell.taken .n { color: #A08D82; }
+.cell.taken::after {
+  content: ""; position: absolute; left: 12%; right: 12%; top: 50%;
+  height: 2px; background: var(--stamp); opacity: .75;
   transform: rotate(-16deg);
 }
-.cell.mine { border-color: var(--gold); background: #2E1D0C; }
-.cell.mine .n { color: var(--gold); }
+
+/* ของคุณเอง : ทอง */
+.cell.mine { background: var(--gold); box-shadow: 0 0 0 2px #FFE9A8; }
+.cell.mine .n { color: #2A1B00; }
 .cell.mine::after { display: none; }
 
 /* ── ปุ่มล่างจอ ────────────────────────────────────────── */
@@ -230,10 +243,12 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 @media (min-height: 780px) and (min-width: 400px) {
   .cell { flex-direction: column; gap: 1px; }
   .cell .who {
-    display: block; font-size: 8px; line-height: 1.1; color: #7E6157;
+    display: block; font-size: 9px; line-height: 1.1;
     max-width: 94%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  .cell.taken::after { opacity: .26; }
+  .cell.taken .who { color: #9C8478; }
+  .cell.mine .who  { color: #4A3200; }
+  .cell.taken::after { opacity: .55; }
   .stub { padding: 13px 15px 15px; }
   .stub .hero { font-size: 12px; }
 }
