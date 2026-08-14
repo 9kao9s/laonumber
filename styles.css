@@ -59,6 +59,46 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 }
 .bar .drawtag.live { color: var(--jade); border-color: var(--jade); }
 
+.helpbtn {
+  flex: none; width: 26px; height: 26px; border-radius: 50%;
+  border: 1px solid var(--line); color: var(--ash);
+  font-family: "Chakra Petch", sans-serif; font-weight: 700; font-size: 14px;
+  line-height: 1; display: flex; align-items: center; justify-content: center;
+}
+.helpbtn:active { background: var(--lacquer-2); }
+
+/* ── ป๊อปอัปวิธีเล่น : ทำเป็นใบปลิวกระดาษให้เข้ากับใบจอง ── */
+.howto {
+  background: var(--paper) !important; color: var(--lacquer);
+  border-top: 4px solid var(--stamp) !important;
+}
+.howto h2 {
+  margin: 0 0 16px; font-family: "Chakra Petch", sans-serif;
+  font-size: 21px; color: var(--lacquer); text-align: center;
+}
+.howto ol { list-style: none; margin: 0; padding: 0; counter-reset: step; }
+.howto li {
+  counter-increment: step;
+  display: grid; grid-template-columns: 30px 1fr; gap: 12px;
+  padding: 11px 0; border-top: 1px dashed #CBB89A;
+}
+.howto li:first-child { border-top: 0; padding-top: 0; }
+.howto li::before {
+  content: counter(step);
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--stamp); color: #fff;
+  font-family: "Chakra Petch", sans-serif; font-weight: 700; font-size: 15px;
+  display: flex; align-items: center; justify-content: center;
+}
+.howto li b { display: block; font-size: 15px; font-weight: 600; line-height: 1.35; }
+.howto li span { display: block; font-size: 13px; color: #6D5540; line-height: 1.5; margin-top: 2px; }
+.howto-foot {
+  margin: 16px 0 14px; padding: 9px 12px; border-radius: 8px;
+  background: #EADCC0; color: #5E4527;
+  font-size: 12px; text-align: center; font-weight: 600;
+}
+.howto .cta { box-shadow: none; }
+
 /* ── กลางจอ : ยืดเติมพื้นที่ ───────────────────────────── */
 .wrap {
   flex: 1; min-height: 0;         /* min-height:0 จำเป็น ไม่งั้นลูกจะดันจนจอล้น */
