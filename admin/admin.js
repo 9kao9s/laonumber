@@ -9,6 +9,7 @@ let ENTRIES = [];
 let CLICKS = [];
 let USERS = new Map();    // line_user_id -> display_name
 let REFS  = new Map();    // ref_code -> ชื่อช่องทาง
+let EDIT_ID = null;       // id ของรายการที่กำลังแก้เลขอยู่
 let CLICK_DAY = null;     // วันที่กำลังดูในแท็บลิงก์
 let DRAW_CLICKS = 0;      // จำนวนคลิกของวันที่ตรงกับงวด ใช้ในการ์ดภาพรวม
 let SETTINGS = {};
@@ -330,6 +331,12 @@ async function loadSettings() {
     open_days: "วันที่เปิด (1=จันทร์ ถึง 7=อาทิตย์)",
     admin_line_url: "ลิงก์ทักแอดมิน", result_url: "ลิงก์ตรวจผล",
     closed_message: "ข้อความตอนปิดรับ",
+    howto_title: "ป๊อปอัป · หัวข้อ",
+    howto_1: "ป๊อปอัป · ขั้นที่ 1 (หัวข้อ|คำอธิบาย)",
+    howto_2: "ป๊อปอัป · ขั้นที่ 2 (หัวข้อ|คำอธิบาย)",
+    howto_3: "ป๊อปอัป · ขั้นที่ 3 (หัวข้อ|คำอธิบาย)",
+    howto_4: "ป๊อปอัป · ขั้นที่ 4 (หัวข้อ|คำอธิบาย)",
+    howto_footer: "ป๊อปอัป · บรรทัดปิดท้าย",
   };
   const HANDLED = ["open_time", "close_time", "open_days"];   // มีกล่องของตัวเองแล้ว
 
@@ -392,20 +399,105 @@ function renderEntries() {
     e.top_number.includes(q) || e.bottom_number.includes(q));
 
   table("tblEntries",
-    ["#", "เวลา", "ชื่อ", "บน", "ล่าง", "ที่มา", "ลิงก์", "ผล"],
+    ["#", "เวลา", "ชื่อ", "บน", "ล่าง", "ที่มา", "ลิงก์", "ผล", "จัดการ"],
     rows,
-    (e) => `<tr>
-      <td class="n">${e.id}</td>
-      <td class="n" style="font-size:12px">${fmtTime(e.created_at)}</td>
-      <td>${esc(e.display_name)}${e.admin_note
-        ? `<div style="font-size:11px;color:var(--sub)">${esc(e.admin_note)}</div>` : ""}</td>
-      <td class="n">${e.top_number}</td>
-      <td class="n">${e.bottom_number}</td>
-      <td><span class="tag ${e.source === "admin" ? "adm" : ""}">${e.source}</span></td>
-      <td class="mono" style="font-size:11px;color:var(--sub)">${esc(e.ref_code ?? "-")}</td>
-      <td>${e.won_top || e.won_bottom
-        ? `<span class="tag win">+${Number(e.payout).toLocaleString("th-TH")}</span>` : ""}</td>
-    </tr>`);
+    (e) => e.id === EDIT_ID ? editRow(e) : viewRow(e));
+
+  wireEntryButtons();
+}
+
+function viewRow(e) {
+  return `<tr>
+    <td class="n">${e.id}</td>
+    <td class="n" style="font-size:12px">${fmtTime(e.created_at)}</td>
+    <td>${esc(e.display_name)}${e.admin_note
+      ? `<div style="font-size:11px;color:var(--sub)">${esc(e.admin_note)}</div>` : ""}</td>
+    <td class="n">${e.top_number}</td>
+    <td class="n">${e.bottom_number}</td>
+    <td><span class="tag ${e.source === "admin" ? "adm" : ""}">${e.source}</span></td>
+    <td class="mono" style="font-size:11px;color:var(--sub)">${esc(e.ref_code ?? "-")}</td>
+    <td>${e.won_top || e.won_bottom
+      ? `<span class="tag win">+${Number(e.payout).toLocaleString("th-TH")}</span>` : ""}</td>
+    <td style="white-space:nowrap">
+      <button class="btn ghost" data-edit="${e.id}">แก้เลข</button>
+      <button class="btn ghost" data-del="${e.id}">คืนสิทธิ์</button>
+    </td>
+  </tr>`;
+}
+
+function editRow(e) {
+  return `<tr style="background:#FDF7F2">
+    <td class="n">${e.id}</td>
+    <td colspan="2">${esc(e.display_name)}
+      <div style="font-size:11px;color:var(--sub)">เดิม ${e.top_number} / ${e.bottom_number}</div></td>
+    <td><input id="edTop" class="mono" maxlength="2" inputmode="numeric"
+        value="${e.top_number}" style="width:52px;padding:5px 7px"></td>
+    <td><input id="edBottom" class="mono" maxlength="2" inputmode="numeric"
+        value="${e.bottom_number}" style="width:52px;padding:5px 7px"></td>
+    <td colspan="3"><input id="edNote" placeholder="เหตุผลที่แก้ เช่น ลูกค้าขอเปลี่ยนทาง LINE"
+        style="padding:5px 7px"></td>
+    <td style="white-space:nowrap">
+      <button class="btn red" data-save="${e.id}">บันทึก</button>
+      <button class="btn ghost" data-cancel="1">ยกเลิก</button>
+    </td>
+  </tr>`;
+}
+
+function wireEntryButtons() {
+  const t = $("tblEntries");
+
+  t.querySelectorAll("[data-edit]").forEach((b) => {
+    b.onclick = () => { EDIT_ID = Number(b.dataset.edit); renderEntries(); };
+  });
+
+  t.querySelectorAll("[data-cancel]").forEach((b) => {
+    b.onclick = () => { EDIT_ID = null; renderEntries(); };
+  });
+
+  t.querySelectorAll("[data-save]").forEach((b) => {
+    b.onclick = async () => {
+      b.disabled = true;
+      const { data, error } = await sb.rpc("admin_update_entry", {
+        p_entry_id: Number(b.dataset.save),
+        p_top: $("edTop").value.replace(/\D/g, ""),
+        p_bottom: $("edBottom").value.replace(/\D/g, ""),
+        p_note: $("edNote").value.trim() || null,
+      });
+      b.disabled = false;
+
+      if (error) return msg("entryMsg", error.message, false);
+      if (!data.ok) return msg("entryMsg", data.message, false);
+
+      EDIT_ID = null;
+      msg("entryMsg", data.message);
+      await loadEntries();
+      renderKpi();
+      renderWinners();
+    };
+  });
+
+  t.querySelectorAll("[data-del]").forEach((b) => {
+    b.onclick = async () => {
+      const e = ENTRIES.find((x) => x.id === Number(b.dataset.del));
+      if (!e) return;
+      if (!confirm(
+        `คืนสิทธิ์ให้ ${e.display_name}?\n\n` +
+        `รายการ บน ${e.top_number} / ล่าง ${e.bottom_number} จะถูกลบ\n` +
+        `เลขทั้งสองจะกลับไปว่างให้คนอื่นจองได้\n` +
+        `และเจ้าตัวจะกลับไปเลือกเลขใหม่เองในแอปได้`)) return;
+
+      const { data, error } = await sb.rpc("admin_delete_entry",
+        { p_entry_id: e.id });
+
+      if (error) return msg("entryMsg", error.message, false);
+      if (!data.ok) return msg("entryMsg", data.message, false);
+
+      msg("entryMsg", data.message);
+      await loadEntries();
+      renderKpi();
+      renderWinners();
+    };
+  });
 }
 $("qEntries").oninput = renderEntries;
 
