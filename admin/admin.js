@@ -331,6 +331,7 @@ async function loadSettings() {
     open_days: "วันที่เปิด (1=จันทร์ ถึง 7=อาทิตย์)",
     admin_line_url: "ลิงก์ทักแอดมิน", result_url: "ลิงก์ตรวจผล",
     closed_message: "ข้อความตอนปิดรับ",
+    howto_mode: "ป๊อปอัป · เปิดเมื่อไหร่ (always / once / off)",
     howto_title: "ป๊อปอัป · หัวข้อ",
     howto_1: "ป๊อปอัป · ขั้นที่ 1 (หัวข้อ|คำอธิบาย)",
     howto_2: "ป๊อปอัป · ขั้นที่ 2 (หัวข้อ|คำอธิบาย)",
