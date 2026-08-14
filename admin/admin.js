@@ -8,6 +8,7 @@ let DRAW = null;          // งวดที่กำลังดูอยู่
 let ENTRIES = [];
 let CLICKS = [];
 let USERS = new Map();    // line_user_id -> display_name
+let REFS  = new Map();    // ref_code -> ชื่อช่องทาง
 let CLICK_DAY = null;     // วันที่กำลังดูในแท็บลิงก์
 let DRAW_CLICKS = 0;      // จำนวนคลิกของวันที่ตรงกับงวด ใช้ในการ์ดภาพรวม
 let SETTINGS = {};
@@ -121,6 +122,7 @@ async function boot() {
   await loadHistory();
 
   if (draws?.length) await selectDraw(draws[0].id);
+  await loadRefCodes();
   await loadDaily();
 }
 
@@ -148,6 +150,67 @@ async function loadEntries() {
   ENTRIES = data ?? [];
   renderEntries();
 }
+
+/* ── ลิงก์ประจำช่องทาง ────────────────────────────────── */
+const CTX_LABEL = {
+  utou: "แชทส่วนตัว", group: "กลุ่ม", room: "ห้องแชท",
+  external: "นอกแอป LINE", none: "เปิดตรง", unknown: "ไม่ทราบ",
+};
+
+function liffUrl(code) {
+  return `https://liff.line.me/${CFG.LIFF_ID}` + (code ? `?ref=${code}` : "");
+}
+
+async function loadRefCodes() {
+  const { data } = await sb.from("ref_codes").select("*")
+    .order("created_at", { ascending: false });
+  REFS.clear();
+  for (const r of data ?? []) REFS.set(r.code, r.label);
+
+  table("tblRefCodes", ["รหัส", "ชื่อช่องทาง", "ลิงก์", ""], data ?? [],
+    (r) => `<tr>
+      <td class="mono">${esc(r.code)}</td>
+      <td>${esc(r.label)}</td>
+      <td class="mono" style="font-size:11px;color:var(--sub);
+        max-width:280px;overflow:hidden;text-overflow:ellipsis">${esc(liffUrl(r.code))}</td>
+      <td style="white-space:nowrap">
+        <button class="btn ghost" data-copy="${esc(r.code)}">คัดลอก</button>
+        <button class="btn ghost" data-del="${esc(r.code)}">ลบ</button>
+      </td>
+    </tr>`);
+
+  $("tblRefCodes").querySelectorAll("[data-copy]").forEach((b) => {
+    b.onclick = async () => {
+      await navigator.clipboard.writeText(liffUrl(b.dataset.copy));
+      b.textContent = "คัดลอกแล้ว";
+      setTimeout(() => { b.textContent = "คัดลอก"; }, 1800);
+    };
+  });
+  $("tblRefCodes").querySelectorAll("[data-del]").forEach((b) => {
+    b.onclick = async () => {
+      if (!confirm(`ลบรหัส ${b.dataset.del}?\nสถิติเก่าไม่หาย แต่จะไม่มีชื่อกำกับแล้ว`)) return;
+      await sb.from("ref_codes").delete().eq("code", b.dataset.del);
+      loadRefCodes();
+    };
+  });
+}
+
+$("btnAddRef").onclick = async () => {
+  const code = $("refCode").value.trim();
+  const label = $("refLabel").value.trim();
+  if (!/^[a-zA-Z0-9_-]{2,40}$/.test(code)) {
+    return msg("refMsg", "รหัสใช้ได้เฉพาะ a-z 0-9 ขีดกลาง ขีดล่าง ยาว 2-40 ตัว", false);
+  }
+  if (!label) return msg("refMsg", "ใส่ชื่อช่องทางด้วย", false);
+
+  const { error } = await sb.from("ref_codes").insert({ code, label });
+  if (error) {
+    return msg("refMsg", error.code === "23505" ? "รหัสนี้มีอยู่แล้ว" : error.message, false);
+  }
+  $("refCode").value = $("refLabel").value = "";
+  msg("refMsg", "เพิ่มแล้ว กดปุ่มคัดลอกเพื่อเอาลิงก์ไปใช้");
+  loadRefCodes();
+};
 
 /* ── คลิกลิงก์ : แยกอิสระจากงวด เพราะวันที่ไม่มีงวดก็มีคนกดได้ ── */
 function dayRange(day) {
@@ -237,11 +300,11 @@ $("btnClickToday").onclick = async () => {
 };
 
 $("btnClickCsv").onclick = () => {
-  const head = ["created_at", "ผู้กด", "ref_code", "invite_token",
-    "in_line_app", "entry_id", "referrer", "line_user_id"];
+  const head = ["created_at", "ผู้กด", "ref_code", "ช่องทาง", "เปิดจาก",
+    "ctx_id", "invite_token", "entry_id", "referrer", "line_user_id"];
   const body = CLICKS.map((c) => [c.created_at, clickerName(c) ?? "", c.ref_code ?? "",
-    c.invite_token ?? "", c.in_line_app ? "ใช่" : "ไม่", c.entry_id ?? "",
-    c.referrer ?? "", c.line_user_id ?? ""]);
+    REFS.get(c.ref_code) ?? "", CTX_LABEL[c.ctx_type] ?? "", c.ctx_id ?? "",
+    c.invite_token ?? "", c.entry_id ?? "", c.referrer ?? "", c.line_user_id ?? ""]);
   const csv = "\uFEFF" + [head, ...body]
     .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
   const a = document.createElement("a");
@@ -381,7 +444,8 @@ function renderRefs() {
       const shown = names.slice(0, 6).map(esc).join(", ");
       const more = names.length > 6 ? ` +อีก ${names.length - 6}` : "";
       return `<tr>
-      <td class="mono">${esc(k)}</td>
+      <td>${esc(REFS.get(k) ?? k)}
+        ${REFS.has(k) ? `<div class="mono" style="font-size:11px;color:var(--sub)">${esc(k)}</div>` : ""}</td>
       <td class="n">${r.clicks}</td>
       <td class="n">${r.users.size}</td>
       <td class="n">${r.conv}</td>
@@ -395,7 +459,7 @@ function renderRefs() {
 
 function renderClicks() {
   table("tblClicks",
-    ["เวลา", "ผู้กด", "รหัสลิงก์", "ในแอป LINE", "จองต่อ", "ที่มา"],
+    ["เวลา", "ผู้กด", "ช่องทาง", "เปิดจาก", "จองต่อ", "ที่มา"],
     CLICKS.slice(0, 100),
     (c) => {
       const name = clickerName(c);
@@ -404,8 +468,8 @@ function renderClicks() {
       <td>${name
         ? esc(name)
         : `<span style="color:var(--sub)">ไม่ทราบ</span>`}</td>
-      <td class="mono">${esc(c.ref_code ?? "-")}</td>
-      <td>${c.in_line_app ? "ใช่" : "ไม่"}</td>
+      <td>${esc(c.ref_code ? (REFS.get(c.ref_code) ?? c.ref_code) : "-")}</td>
+      <td>${esc(CTX_LABEL[c.ctx_type] ?? (c.in_line_app ? "ในแอป LINE" : "นอกแอป LINE"))}</td>
       <td>${c.entry_id ? `<span class="tag win">#${c.entry_id}</span>` : ""}</td>
       <td style="font-size:11px;color:var(--sub);max-width:180px;overflow:hidden">
         ${esc(c.invite_token ? "i=" + c.invite_token + " · " : "")}${esc(c.referrer ?? "-")}</td>
@@ -517,7 +581,9 @@ async function loadUsers() {
 }
 $("qUsers").oninput = () => loadUsers();
 document.querySelector('nav [data-t="users"]').addEventListener("click", loadUsers);
-document.querySelector('nav [data-t="links"]').addEventListener("click", () => loadDaily());
+document.querySelector('nav [data-t="links"]').addEventListener("click", () => {
+  loadRefCodes(); loadDaily();
+});
 
 /* ── เวลาเปิด-ปิด ─────────────────────────────────────── */
 const DAY_NAMES = ["จ", "อ", "พ", "พฤ", "ศ", "ส", "อา"];   // 1..7 ตาม isodow
