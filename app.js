@@ -67,12 +67,27 @@ function readLink() {
 function trackClick() {
   if (sessionStorage.getItem("lucky_tracked")) return;
   sessionStorage.setItem("lucky_tracked", "1");
+
+  // LINE ไม่บอกว่ามาจาก OA ตัวไหน แต่บอกได้ว่าเปิดจากแชทแบบไหน
+  // utou = แชทส่วนตัว (รวม rich menu), group = กลุ่ม, external = นอกแอป LINE
+  let ctx = {};
+  try {
+    if (S.liff.ready || (typeof liff !== "undefined" && liff.isInClient())) {
+      const c = liff.getContext() ?? {};
+      ctx = {
+        ctx_type: c.type ?? null,
+        ctx_id: c.utouId ?? c.groupId ?? c.roomId ?? null,
+      };
+    }
+  } catch {}
+
   callFn("track-click", {
     ref: S.ref,
     invite: S.invite,
     referrer: document.referrer,
     in_line: S.liff.ready,
     id_token: idToken(),
+    ...ctx,
   }).catch(() => {});
 }
 
@@ -106,8 +121,9 @@ async function loadSettings() {
 }
 
 async function loadDraw() {
-  const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
-  const { data } = await sb.from("draws").select("*").eq("draw_date", today).maybeSingle();
+  // เรียกผ่าน rpc เพื่อให้ผู้เข้าชมคนแรกของวันเป็นคนสร้างงวดให้เอง
+  // ไม่ต้องรอ cron อย่างเดียว ถ้า cron พลาดระบบก็ยังเดินต่อได้
+  const { data } = await sb.rpc("public_draw");
   S.draw = data ?? null;
 
   const now = Date.now();
@@ -120,7 +136,13 @@ async function loadDraw() {
     const d = new Date(S.draw.draw_date + "T12:00:00");
     $("stubDate").textContent = new Intl.DateTimeFormat("th-TH",
       { day: "2-digit", month: "short", year: "2-digit" }).format(d);
-    tag.textContent = S.open ? "เปิดรับเลข" : "ปิดรับแล้ว";
+
+    // บอกให้ชัดว่ายังไม่ถึงเวลา ต่างจากปิดไปแล้ว
+    if (S.open) tag.textContent = "เปิดรับเลข";
+    else if (data.opens_at && now < Date.parse(data.opens_at)) {
+      tag.textContent = "เปิด " + new Date(data.opens_at).toLocaleTimeString("th-TH",
+        { timeZone: "Asia/Bangkok", hour: "2-digit", minute: "2-digit", hour12: false });
+    } else tag.textContent = "ปิดรับแล้ว";
     tag.classList.toggle("live", S.open);
   } else {
     $("stubDate").textContent = "—";
