@@ -26,7 +26,7 @@ const S = {
   mine: null,
   ref: "",
   invite: "",
-  liff: { ready: false, name: "", canShare: false },
+  liff: { ready: false, inClient: false, needLogin: false, name: "", canShare: false },
   busy: false,
 };
 
@@ -113,17 +113,34 @@ async function initLiff() {
   } catch {
     return;
   }
+
+  S.liff.inClient = liff.isInClient();
+
   if (!liff.isLoggedIn()) {
-    if (liff.isInClient()) liff.login({ redirectUri: location.href });
-    return;                                   // นอกแอป LINE = ดูอย่างเดียว
+    // ในแอป LINE พาไปล็อกอินให้เลย ผู้ใช้แทบไม่รู้สึกว่ามีขั้นตอนนี้
+    // บนคอมหรือเบราว์เซอร์ปกติ ไม่เด้งเอง เพราะการถูกพาออกจากหน้า
+    // โดยไม่ได้กดอะไรเลยทำให้คนตกใจ ให้เห็นกระดานก่อนแล้วค่อยกดเอง
+    if (S.liff.inClient) liff.login({ redirectUri: location.href });
+    else S.liff.needLogin = true;
+    return;
   }
+
   S.liff.ready = true;
   try { S.liff.canShare = liff.isApiAvailable("shareTargetPicker"); } catch {}
   try {
     const p = await liff.getProfile();
     S.liff.name = p.displayName ?? "";
+    // เติมชื่อให้เป็นค่าตั้งต้นเท่านั้น ลูกค้าลบแล้วพิมพ์ใหม่ได้ตลอด
     if (!$("playerName").value) $("playerName").value = S.liff.name.slice(0, 28);
   } catch {}
+}
+
+function lineLogin() {
+  try {
+    liff.login({ redirectUri: location.href });
+  } catch {
+    toast("เปิดหน้าล็อกอินไม่ได้ ลองรีเฟรชอีกครั้ง");
+  }
 }
 
 /* ── ข้อมูลกระดาน : รอบเดียวจบ ────────────────────────── */
@@ -275,6 +292,12 @@ function updateCta() {
     return;
   }
   if (!S.liff.ready) {
+    if (S.liff.needLogin) {
+      // บนคอม LINE จะขึ้น QR ให้สแกนด้วยมือถือ หรือกรอกอีเมลก็ได้
+      btn.textContent = "เข้าสู่ระบบด้วย LINE เพื่อจองเลข";
+      btn.onclick = lineLogin;
+      return;
+    }
     btn.className = "cta warn";
     btn.textContent = "เปิดหน้านี้ในแอป LINE เพื่อจองเลข";
     btn.disabled = true;
