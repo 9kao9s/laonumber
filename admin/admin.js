@@ -125,6 +125,7 @@ async function boot() {
   if (draws?.length) await selectDraw(draws[0].id);
   await loadRefCodes();
   await loadDaily();
+  await loadChannels();
 }
 
 async function selectDraw(id) {
@@ -212,6 +213,87 @@ $("btnAddRef").onclick = async () => {
   msg("refMsg", "เพิ่มแล้ว กดปุ่มคัดลอกเพื่อเอาลิงก์ไปใช้");
   loadRefCodes();
 };
+
+
+/* ── ช่องทางที่มา และอุปกรณ์ ──────────────────────────── */
+const CHAN_LABEL = {
+  facebook: "Facebook", instagram: "Instagram", google: "Google",
+  tiktok: "TikTok", youtube: "YouTube", line: "LINE",
+  direct: "เข้าตรง / พิมพ์ลิงก์เอง", other: "เว็บอื่น", unknown: "ไม่ทราบ",
+};
+const DEV_LABEL = { mobile: "มือถือ", tablet: "แท็บเล็ต", desktop: "คอมพิวเตอร์", unknown: "ไม่ทราบ" };
+
+function chanName(c) {
+  return REFS.get(c) || CHAN_LABEL[c] || c;
+}
+
+async function loadChannels() {
+  const days = Number($("chanRange").value || 30);
+  const from = new Date(Date.now() - days * 86400000)
+    .toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
+
+  const { data } = await sb.from("v_channel_daily").select("*").gte("day", from);
+  const rows = data ?? [];
+
+  // รวมตามช่องทาง
+  const byChan = new Map();
+  const byDev = new Map();
+  let total = 0;
+
+  for (const r of rows) {
+    total += Number(r.clicks);
+
+    const c = byChan.get(r.channel) ?? { clicks: 0, users: 0, conv: 0, mobile: 0, desktop: 0 };
+    c.clicks += Number(r.clicks);
+    c.users += Number(r.users);
+    c.conv += Number(r.converted);
+    if (r.device === "desktop") c.desktop += Number(r.clicks); else c.mobile += Number(r.clicks);
+    byChan.set(r.channel, c);
+
+    const key = r.device + "|" + r.os + "|" + r.app;
+    const d = byDev.get(key) ?? { device: r.device, os: r.os, app: r.app, clicks: 0, conv: 0 };
+    d.clicks += Number(r.clicks);
+    d.conv += Number(r.converted);
+    byDev.set(key, d);
+  }
+
+  const chans = [...byChan.entries()].sort((a, b) => b[1].clicks - a[1].clicks);
+  table("tblChannel",
+    ["ช่องทาง", "คลิก", "สัดส่วน", "คนไม่ซ้ำ", "จองจริง", "อัตราแปลง", "มือถือ / คอม"],
+    chans,
+    ([k, r]) => `<tr>
+      <td>${esc(chanName(k))}</td>
+      <td class="n">${r.clicks}</td>
+      <td class="n">${total ? Math.round(r.clicks / total * 100) : 0}%</td>
+      <td class="n">${r.users}</td>
+      <td class="n">${r.conv}</td>
+      <td class="n">${r.clicks ? Math.round(r.conv / r.clicks * 100) : 0}%</td>
+      <td class="n" style="font-size:12px;color:var(--sub)">${r.mobile} / ${r.desktop}</td>
+    </tr>`);
+
+  // การ์ดสรุปอุปกรณ์
+  const devTotal = { mobile: 0, tablet: 0, desktop: 0, unknown: 0 };
+  for (const d of byDev.values()) devTotal[d.device] = (devTotal[d.device] ?? 0) + d.clicks;
+  const sum = Object.values(devTotal).reduce((a, b) => a + b, 0) || 1;
+
+  $("deviceCards").innerHTML = ["mobile", "desktop", "tablet"].map((k) =>
+    `<div class="card"><b>${DEV_LABEL[k]}</b>
+      <div class="v">${Math.round((devTotal[k] ?? 0) / sum * 100)}<small>%</small></div>
+      <div style="font-size:11px;color:var(--sub)">${devTotal[k] ?? 0} คลิก</div>
+    </div>`).join("");
+
+  const devs = [...byDev.values()].sort((a, b) => b.clicks - a.clicks).slice(0, 25);
+  table("tblDevice", ["อุปกรณ์", "ระบบ", "เปิดด้วยแอป", "คลิก", "จองจริง"], devs,
+    (d) => `<tr>
+      <td>${esc(DEV_LABEL[d.device] ?? d.device)}</td>
+      <td>${esc(d.os === "unknown" ? "-" : d.os)}</td>
+      <td>${esc(d.app === "unknown" ? "-" : d.app)}</td>
+      <td class="n">${d.clicks}</td>
+      <td class="n">${d.conv}</td>
+    </tr>`);
+}
+
+$("chanRange").onchange = loadChannels;
 
 /* ── คลิกลิงก์ : แยกอิสระจากงวด เพราะวันที่ไม่มีงวดก็มีคนกดได้ ── */
 function dayRange(day) {
@@ -301,11 +383,13 @@ $("btnClickToday").onclick = async () => {
 };
 
 $("btnClickCsv").onclick = () => {
-  const head = ["created_at", "ผู้กด", "ref_code", "ช่องทาง", "เปิดจาก",
-    "ctx_id", "invite_token", "entry_id", "referrer", "line_user_id"];
-  const body = CLICKS.map((c) => [c.created_at, clickerName(c) ?? "", c.ref_code ?? "",
-    REFS.get(c.ref_code) ?? "", CTX_LABEL[c.ctx_type] ?? "", c.ctx_id ?? "",
-    c.invite_token ?? "", c.entry_id ?? "", c.referrer ?? "", c.line_user_id ?? ""]);
+  const head = ["created_at", "ผู้กด", "ช่องทาง", "ref_code", "utm_source",
+    "utm_campaign", "อุปกรณ์", "ระบบ", "แอป", "เปิดจาก", "จองต่อ",
+    "referrer", "line_user_id"];
+  const body = CLICKS.map((c) => [c.created_at, clickerName(c) ?? "",
+    c.channel ? chanName(c.channel) : "", c.ref_code ?? "", c.utm_source ?? "",
+    c.utm_campaign ?? "", DEV_LABEL[c.device] ?? "", c.os ?? "", c.app ?? "",
+    CTX_LABEL[c.ctx_type] ?? "", c.entry_id ?? "", c.referrer ?? "", c.line_user_id ?? ""]);
   const csv = "\uFEFF" + [head, ...body]
     .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
   const a = document.createElement("a");
@@ -331,6 +415,9 @@ async function loadSettings() {
     open_days: "วันที่เปิด (1=จันทร์ ถึง 7=อาทิตย์)",
     admin_line_url: "ลิงก์ทักแอดมิน", result_url: "ลิงก์ตรวจผล",
     closed_message: "ข้อความตอนปิดรับ",
+    require_friend: "บังคับแอดเพื่อนก่อนจึงจะทายเลขได้ (1=เปิด 0=ปิด)",
+    oa_add_url: "ลิงก์แอดเพื่อน OA (https://line.me/R/ti/p/@xxxx)",
+    friend_message: "ข้อความตอนยังไม่ได้แอดเพื่อน",
     howto_mode: "ป๊อปอัป · เปิดเมื่อไหร่ (always / once / off)",
     howto_title: "ป๊อปอัป · หัวข้อ",
     howto_1: "ป๊อปอัป · ขั้นที่ 1 (หัวข้อ|คำอธิบาย)",
@@ -552,7 +639,7 @@ function renderRefs() {
 
 function renderClicks() {
   table("tblClicks",
-    ["เวลา", "ผู้กด", "ช่องทาง", "เปิดจาก", "จองต่อ", "ที่มา"],
+    ["เวลา", "ผู้กด", "ช่องทาง", "อุปกรณ์", "แอป", "จองต่อ", "ที่มา"],
     CLICKS.slice(0, 100),
     (c) => {
       const name = clickerName(c);
@@ -561,8 +648,9 @@ function renderClicks() {
       <td>${name
         ? esc(name)
         : `<span style="color:var(--sub)">ไม่ทราบ</span>`}</td>
-      <td>${esc(c.ref_code ? (REFS.get(c.ref_code) ?? c.ref_code) : "-")}</td>
-      <td>${esc(CTX_LABEL[c.ctx_type] ?? (c.in_line_app ? "ในแอป LINE" : "นอกแอป LINE"))}</td>
+      <td>${esc(c.channel ? chanName(c.channel) : "-")}</td>
+      <td>${esc(DEV_LABEL[c.device] ?? "-")}</td>
+      <td>${esc(c.app ?? (c.in_line_app ? "LINE" : "-"))}</td>
       <td>${c.entry_id ? `<span class="tag win">#${c.entry_id}</span>` : ""}</td>
       <td style="font-size:11px;color:var(--sub);max-width:180px;overflow:hidden">
         ${esc(c.invite_token ? "i=" + c.invite_token + " · " : "")}${esc(c.referrer ?? "-")}</td>
@@ -675,7 +763,7 @@ async function loadUsers() {
 $("qUsers").oninput = () => loadUsers();
 document.querySelector('nav [data-t="users"]').addEventListener("click", loadUsers);
 document.querySelector('nav [data-t="links"]').addEventListener("click", () => {
-  loadRefCodes(); loadDaily();
+  loadRefCodes(); loadDaily(); loadChannels();
 });
 
 /* ── เวลาเปิด-ปิด ─────────────────────────────────────── */
