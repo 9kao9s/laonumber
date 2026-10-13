@@ -148,6 +148,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--stamp);outline-o
         <input id="qEntries" placeholder="ค้นชื่อ หรือ เลข">
         <button class="btn ghost" id="btnCsv">ดาวน์โหลด CSV</button>
       </div>
+      <div id="entryMsg"></div>
       <div class="panel scroll"><table class="tbl" id="tblEntries"></table></div>
     </section>
 
@@ -166,6 +167,24 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--stamp);outline-o
       <div id="refMsg"></div>
       <div class="panel scroll" style="max-height:36vh">
         <table class="tbl" id="tblRefCodes"></table>
+      </div>
+
+      <h2>ลูกค้ามาจากช่องทางไหน</h2>
+      <div class="bar-actions" style="margin-bottom:8px">
+        <select id="chanRange" style="width:auto">
+          <option value="7">7 วันล่าสุด</option>
+          <option value="30" selected>30 วันล่าสุด</option>
+          <option value="90">90 วันล่าสุด</option>
+        </select>
+      </div>
+      <div class="panel scroll" style="max-height:34vh">
+        <table class="tbl" id="tblChannel"></table>
+      </div>
+
+      <h2>อุปกรณ์และแอปที่ใช้เปิด</h2>
+      <div class="cards" id="deviceCards" style="margin-bottom:10px"></div>
+      <div class="panel scroll" style="max-height:30vh">
+        <table class="tbl" id="tblDevice"></table>
       </div>
 
       <h2>สรุปรายวัน 60 วันล่าสุด</h2>
