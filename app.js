@@ -26,7 +26,8 @@ const S = {
   mine: null,
   ref: "",
   invite: "",
-  liff: { ready: false, inClient: false, needLogin: false, name: "", canShare: false },
+  liff: { ready: false, inClient: false, needLogin: false, name: "", canShare: false,
+          isFriend: null },   // null = ยังไม่รู้
   busy: false,
 };
 
@@ -55,6 +56,11 @@ async function callFn(name, payload) {
 
 function idToken() {
   try { return liff.getIDToken() ?? ""; } catch { return ""; }
+}
+
+// คนละตัวกับ id_token  API เช็คเพื่อนของ LINE รับแค่ตัวนี้
+function accessToken() {
+  try { return liff.getAccessToken() ?? ""; } catch { return ""; }
 }
 
 /* ── ตัวช่วย ──────────────────────────────────────────── */
@@ -141,6 +147,32 @@ function lineLogin() {
   } catch {
     toast("เปิดหน้าล็อกอินไม่ได้ ลองรีเฟรชอีกครั้ง");
   }
+}
+
+/* ── สถานะเพื่อน ──────────────────────────────────────────
+   ใช้เพื่อแสดงปุ่มให้ถูกเท่านั้น ไม่ใช่ตัวกัน
+   ด่านจริงอยู่ใน Edge Function ที่ยิงไปถาม LINE เองอีกรอบ */
+async function refreshFriend() {
+  if (!S.liff.ready || S.settings.require_friend !== "1") return;
+  try {
+    const f = await liff.getFriendship();
+    S.liff.isFriend = f?.friendFlag === true;
+  } catch {
+    S.liff.isFriend = null;        // ถามไม่ได้ ปล่อยให้เซิร์ฟเวอร์ตัดสิน
+  }
+  updateCta();
+}
+
+function openAddFriend() {
+  const url = S.settings.oa_add_url;
+  if (!url) { toast("ยังไม่ได้ตั้งลิงก์แอดเพื่อนในระบบ"); return; }
+  try {
+    liff.openWindow({ url, external: false });
+  } catch {
+    location.href = url;
+  }
+  // กลับมาจากหน้าแอดเพื่อนแล้วเช็คให้ใหม่เอง
+  setTimeout(refreshFriend, 2500);
 }
 
 /* ── ข้อมูลกระดาน : รอบเดียวจบ ────────────────────────── */
@@ -303,6 +335,11 @@ function updateCta() {
     btn.disabled = true;
     return;
   }
+  if (S.settings.require_friend === "1" && S.liff.isFriend === false) {
+    btn.textContent = "แอดเพื่อน LINE ก่อนจึงจะทายเลขได้";
+    btn.onclick = openAddFriend;
+    return;
+  }
   if (!S.top || !S.bottom) {
     btn.className = "cta ghost";
     btn.textContent = !S.top && !S.bottom
@@ -329,9 +366,11 @@ async function openConfirm() {
 
   try {
     const r = await callFn("play", {
-      action: "check", id_token: idToken(), top: S.top, bottom: S.bottom,
+      action: "check", id_token: idToken(), access_token: accessToken(),
+      top: S.top, bottom: S.bottom,
     });
     if (!r.ok) {
+      if (r.code === "FRIEND_REQUIRED") S.liff.isFriend = false;
       toast(r.message ?? "ตรวจสอบไม่สำเร็จ");
       await loadBoard();
       return;
@@ -363,12 +402,18 @@ async function submit() {
     const r = await callFn("play", {
       action: "submit",
       id_token: idToken(),
+      access_token: accessToken(),
       name: $("playerName").value.trim(),
       top: S.top, bottom: S.bottom,
       ref: S.ref, invite: S.invite,
     });
 
     if (!r.ok) {
+      if (r.code === "FRIEND_REQUIRED") {
+        S.liff.isFriend = false;
+        $("sheetConfirm").classList.remove("show");
+        toast(r.message ?? "");
+      }
       $("confirmErr").textContent = r.message ?? "บันทึกไม่สำเร็จ";
       await loadBoard();
       return;
@@ -649,12 +694,13 @@ async function subscribeBoard() {
       updateCta();
       trackClick();
       loadMine();
+      refreshFriend();
     });
     subscribeBoard();
   });
 
   setInterval(loadBoard, 45000);
   document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) loadBoard();
+    if (!document.hidden) { loadBoard(); refreshFriend(); }
   });
 })();
