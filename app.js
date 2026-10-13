@@ -438,76 +438,102 @@ async function submit() {
 function drawSlip(entry) {
   const c = $("slipCanvas");
   const x = c.getContext("2d");
-  const W = c.width, H = c.height;
+  const W = c.width, H = c.height, cx = W / 2;
 
-  x.fillStyle = "#F4EBD9"; x.fillRect(0, 0, W, H);
+  // พื้นกรมท่าไล่สี ให้เข้าชุดกับหน้าเว็บ และอ่านชัดในแชท LINE
+  const bg = x.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, "#132046");
+  bg.addColorStop(.55, "#0A1226");
+  bg.addColorStop(1, "#060A14");
+  x.fillStyle = bg; x.fillRect(0, 0, W, H);
 
-  x.strokeStyle = "#C8102E"; x.lineWidth = 8;
-  x.strokeRect(26, 26, W - 52, H - 52);
-  x.strokeStyle = "#C9A227"; x.lineWidth = 2;
-  x.strokeRect(42, 42, W - 84, H - 84);
+  // แสงเรืองมุมบน
+  const gl = x.createRadialGradient(W * .16, 90, 10, W * .16, 90, W * .85);
+  gl.addColorStop(0, "rgba(88,200,255,.22)");
+  gl.addColorStop(1, "rgba(88,200,255,0)");
+  x.fillStyle = gl; x.fillRect(0, 0, W, H);
 
-  const cx = W / 2;
-  x.textAlign = "center"; x.fillStyle = "#23100E";
+  x.strokeStyle = "rgba(255,255,255,.16)"; x.lineWidth = 2;
+  roundRect(x, 34, 34, W - 68, H - 68, 28); x.stroke();
 
-  x.font = "700 62px 'Chakra Petch', sans-serif";
-  x.fillText(S.settings.receipt_title ?? "LUCKY", cx, 140);
+  x.textAlign = "center";
 
-  x.font = "400 24px 'IBM Plex Sans Thai', sans-serif";
-  x.fillStyle = "#6D5540";
-  wrap(x, S.settings.receipt_subtitle ?? "", cx, 182, W - 160, 30);
+  x.fillStyle = "#EAF2FF";
+  x.font = "700 56px 'Chakra Petch', sans-serif";
+  x.fillText(S.settings.receipt_title || "แนวทางเลขเด็ด", cx, 142);
 
-  x.strokeStyle = "#D8C8AA"; x.lineWidth = 2;
-  x.beginPath(); x.moveTo(80, 232); x.lineTo(W - 80, 232); x.stroke();
+  x.font = "400 23px 'IBM Plex Sans Thai', sans-serif";
+  x.fillStyle = "#93A6C9";
+  wrap(x, S.settings.receipt_subtitle ?? "", cx, 184, W - 170, 30);
 
-  x.fillStyle = "#8A6F52"; x.font = "500 20px 'IBM Plex Sans Thai', sans-serif";
-  x.fillText("ผู้ร่วมสนุก", cx, 278);
-  x.fillStyle = "#23100E"; x.font = "600 40px 'IBM Plex Sans Thai', sans-serif";
-  x.fillText(clip(entry.display_name, 22), cx, 326);
+  x.strokeStyle = "rgba(255,255,255,.12)"; x.lineWidth = 2;
+  x.beginPath(); x.moveTo(90, 234); x.lineTo(W - 90, 234); x.stroke();
 
-  const boxY = 380, boxH = 250, boxW = 320, gap = 36;
-  const left = cx - boxW - gap / 2;
-  numberBox(x, left, boxY, boxW, boxH, "2 ตัวบน", entry.top_number);
-  numberBox(x, cx + gap / 2, boxY, boxW, boxH, "2 ตัวล่าง", entry.bottom_number);
+  x.fillStyle = "#5E7099"; x.font = "500 20px 'IBM Plex Sans Thai', sans-serif";
+  x.fillText("ผู้ร่วมสนุก", cx, 280);
+  x.fillStyle = "#EAF2FF"; x.font = "600 40px 'IBM Plex Sans Thai', sans-serif";
+  x.fillText(clip(entry.display_name, 22), cx, 328);
+
+  const boxW = 320, gap = 36;
+  numberBox(x, cx - boxW - gap / 2, 382, boxW, 250, "2 ตัวบน", entry.top_number);
+  numberBox(x, cx + gap / 2, 382, boxW, 250, "2 ตัวล่าง", entry.bottom_number);
 
   const d = entry.created_at ? new Date(entry.created_at) : new Date();
-  x.fillStyle = "#6D5540"; x.font = "400 24px 'IBM Plex Sans Thai', sans-serif";
-  x.fillText("งวดวันที่ " + thDate(d), cx, 700);
+  x.fillStyle = "#93A6C9"; x.font = "400 24px 'IBM Plex Sans Thai', sans-serif";
+  x.fillText("งวดวันที่ " + thDate(d), cx, 702);
 
-  x.fillStyle = "#8A6F52"; x.font = "400 20px 'IBM Plex Mono', monospace";
+  x.fillStyle = "#5E7099"; x.font = "400 20px 'IBM Plex Mono', monospace";
   x.fillText(
     "NO." + String(entry.id).padStart(6, "0") + "   " +
     d.toLocaleString("th-TH", { hour12: false, timeZone: "Asia/Bangkok" }),
-    cx, 742,
+    cx, 744,
   );
 
-  x.setLineDash([10, 10]); x.strokeStyle = "#C3B091"; x.lineWidth = 2;
-  x.beginPath(); x.moveTo(70, 800); x.lineTo(W - 70, 800); x.stroke();
+  x.setLineDash([9, 11]); x.strokeStyle = "rgba(255,255,255,.14)"; x.lineWidth = 2;
+  x.beginPath(); x.moveTo(80, 802); x.lineTo(W - 80, 802); x.stroke();
   x.setLineDash([]);
 
-  x.fillStyle = "#23100E"; x.font = "600 26px 'IBM Plex Sans Thai', sans-serif";
-  x.fillText("ใบยืนยันการร่วมสนุก", cx, 858);
-  x.fillStyle = "#6D5540"; x.font = "400 22px 'IBM Plex Sans Thai', sans-serif";
+  x.fillStyle = "#EAF2FF"; x.font = "600 26px 'IBM Plex Sans Thai', sans-serif";
+  x.fillText("ใบยืนยันการร่วมสนุก", cx, 860);
+  x.fillStyle = "#93A6C9"; x.font = "400 22px 'IBM Plex Sans Thai', sans-serif";
   wrap(x, "ส่งภาพนี้ให้แอดมินเพื่อยืนยันสิทธิ์ ใบจองนี้ใช้ได้เฉพาะงวดที่ระบุ",
-    cx, 900, W - 200, 30);
+    cx, 902, W - 200, 30);
 
+  // ตราประทับ
   x.save();
-  x.translate(W - 175, H - 155); x.rotate(-0.28);
-  x.strokeStyle = "rgba(200,16,46,.5)"; x.lineWidth = 4;
-  x.strokeRect(-95, -38, 190, 76);
-  x.fillStyle = "rgba(200,16,46,.5)";
+  x.translate(W - 178, H - 152); x.rotate(-0.28);
+  x.strokeStyle = "rgba(88,200,255,.5)"; x.lineWidth = 4;
+  roundRect(x, -98, -39, 196, 78, 12); x.stroke();
+  x.fillStyle = "rgba(88,200,255,.55)";
   x.font = "700 34px 'Chakra Petch', sans-serif";
   x.fillText("ยืนยันแล้ว", 0, 12);
   x.restore();
 }
 
+function roundRect(x, bx, by, bw, bh, r) {
+  x.beginPath();
+  x.moveTo(bx + r, by);
+  x.arcTo(bx + bw, by, bx + bw, by + bh, r);
+  x.arcTo(bx + bw, by + bh, bx, by + bh, r);
+  x.arcTo(bx, by + bh, bx, by, r);
+  x.arcTo(bx, by, bx + bw, by, r);
+  x.closePath();
+}
+
 function numberBox(x, bx, by, bw, bh, label, value) {
-  x.fillStyle = "#FFFFFF"; x.fillRect(bx, by, bw, bh);
-  x.strokeStyle = "#23100E"; x.lineWidth = 3; x.strokeRect(bx, by, bw, bh);
-  x.fillStyle = "#8A6F52"; x.font = "500 22px 'IBM Plex Sans Thai', sans-serif";
-  x.fillText(label, bx + bw / 2, by + 46);
-  x.fillStyle = "#C8102E"; x.font = "700 130px 'Chakra Petch', sans-serif";
-  x.fillText(value, bx + bw / 2, by + 178);
+  x.fillStyle = "rgba(255,255,255,.07)";
+  roundRect(x, bx, by, bw, bh, 18); x.fill();
+  x.strokeStyle = "rgba(88,200,255,.35)"; x.lineWidth = 2;
+  roundRect(x, bx, by, bw, bh, 18); x.stroke();
+
+  x.fillStyle = "#5E7099"; x.font = "500 22px 'IBM Plex Sans Thai', sans-serif";
+  x.fillText(label, bx + bw / 2, by + 48);
+
+  x.save();
+  x.shadowColor = "rgba(88,200,255,.65)"; x.shadowBlur = 26;
+  x.fillStyle = "#EAF2FF"; x.font = "700 128px 'Chakra Petch', sans-serif";
+  x.fillText(value, bx + bw / 2, by + 180);
+  x.restore();
 }
 
 function clip(s, n) {
