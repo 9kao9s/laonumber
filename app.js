@@ -26,6 +26,7 @@ const S = {
   mine: null,
   ref: "",
   invite: "",
+  link: {},
   liff: { ready: false, inClient: false, needLogin: false, name: "", canShare: false,
           isFriend: null },   // null = ยังไม่รู้
   busy: false,
@@ -84,12 +85,25 @@ function escapeHtml(s) {
 }
 
 /* ── ลิงก์แนะนำ ───────────────────────────────────────── */
+// พารามิเตอร์ที่ช่วยบอกว่าลูกค้ามาจากไหน
+// fbclid มาจากโฆษณา Facebook, gclid จาก Google, ttclid จาก TikTok
+// ทั้งหมดติดมากับ URL เอง ไม่ต้องตั้งค่าอะไรเพิ่มในฝั่งโฆษณา
+const LINK_KEYS = ["ref", "i", "utm_source", "utm_medium", "utm_campaign",
+                   "fbclid", "gclid", "ttclid"];
+
 function readLink() {
   const q = new URLSearchParams(location.search);
-  S.ref = (q.get("ref") || sessionStorage.getItem("lucky_ref") || "").slice(0, 80);
-  S.invite = (q.get("i") || sessionStorage.getItem("lucky_invite") || "").slice(0, 40);
-  if (S.ref) sessionStorage.setItem("lucky_ref", S.ref);
-  if (S.invite) sessionStorage.setItem("lucky_invite", S.invite);
+  S.link = {};
+  for (const k of LINK_KEYS) {
+    const store = "lucky_" + k;
+    const v = (q.get(k) || sessionStorage.getItem(store) || "").slice(0, 200);
+    if (v) {
+      S.link[k] = v;
+      try { sessionStorage.setItem(store, v); } catch {}
+    }
+  }
+  S.ref = (S.link.ref || "").slice(0, 80);
+  S.invite = (S.link.i || "").slice(0, 40);
 }
 
 function trackClick() {
@@ -106,8 +120,10 @@ function trackClick() {
   } catch {}
 
   callFn("track-click", {
+    ...S.link,
     ref: S.ref, invite: S.invite, referrer: document.referrer,
-    in_line: S.liff.ready, id_token: idToken(), ...ctx,
+    in_line: S.liff.ready || (typeof liff !== "undefined" && liff.isInClient?.()),
+    id_token: idToken(), ...ctx,
   }).catch(() => {});
 }
 
